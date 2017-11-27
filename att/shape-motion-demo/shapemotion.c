@@ -7,6 +7,8 @@
  *  is turned off along with the green LED.
  */  
 #include <msp430.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include <libTimer.h>
 #include <lcdutils.h>
 #include <lcddraw.h>
@@ -18,6 +20,7 @@
 
 
 AbRect paddle = {abRectGetBounds, abRectCheck, {20,3}};
+AbRect ball = {abRectGetBounds, abRectCheck, {2,2}};
 AbRArrow rightArrow = {abRArrowGetBounds, abRArrowCheck, 30};
 
 AbRectOutline fieldOutline = {	/* playing field */
@@ -35,7 +38,7 @@ Layer layer4 = {
   
 
 Layer layer3 = {		/**< Layer with an orange circle */
-  (AbShape *)&circle8,
+  (AbShape *)&ball,
   {(screenWidth/2)+10, (screenHeight/2)+5}, /**< bit below & right of center */
   {0,0}, {0,0},				    /* last & next pos */
   COLOR_WHITE,
@@ -78,10 +81,10 @@ typedef struct MovLayer_s {
 } MovLayer;
 
 /* initial value of {0,0} will be overwritten */
-MovLayer ml4 = { &layer4, {1,0}, 0};
-MovLayer ml3 = { &layer3, {2,1}, &ml4 }; /**< not all layers move */
-MovLayer ml1 = { &p1, {0,0}, &ml3 }; 
-MovLayer ml0 = { &p0, {1,0}, &ml1 }; 
+MovLayer ml4 = { &layer4, {1,0}, 0}; //arrow
+MovLayer ml3 = { &layer3, {4,2}, &ml4 };//ball is life
+MovLayer ml1 = { &p1, {0,0}, &ml3 }; //player paddle
+MovLayer ml0 = { &p0, {2,0}, &ml1 };//cpu paddle 
 
 void movLayerDraw(MovLayer *movLayers, Layer *layers)
 {
@@ -128,6 +131,7 @@ void movLayerDraw(MovLayer *movLayers, Layer *layers)
  *  \param ml The moving shape to be advanced
  *  \param fence The region which will serve as a boundary for ml
  */
+char xxx[3] = {'0','0',0};
 void mlAdvance(MovLayer *ml, Region *fence)
 {
   Vec2 newPos;
@@ -137,16 +141,24 @@ void mlAdvance(MovLayer *ml, Region *fence)
     vec2Add(&newPos, &ml->layer->posNext, &ml->velocity);
     abShapeGetBounds(ml->layer->abShape, &newPos, &shapeBoundary);
     for (axis = 0; axis < 2; axis ++) {
-      if ((shapeBoundary.topLeft.axes[axis] < fence->topLeft.axes[axis]) ||
-	  (shapeBoundary.botRight.axes[axis] > fence->botRight.axes[axis]) ) {
+      if((shapeBoundary.topLeft.axes[axis] < fence->topLeft.axes[axis])){
 	int velocity = ml->velocity.axes[axis] = -ml->velocity.axes[axis];
 	newPos.axes[axis] += (2*velocity);
+	if(axis == 1){
+	  xxx[1] = (char)((int)xxx[1]+1);
+	}
+      }
+      else if ((shapeBoundary.botRight.axes[axis] > fence->botRight.axes[axis])) {
+	int velocity = ml->velocity.axes[axis] = -ml->velocity.axes[axis];
+	newPos.axes[axis] += (2*velocity);
+	if(axis == 1){
+	  xxx[0] = (char)((int)xxx[0]+1);
+	}
       }	/**< if outside of fence */
     } /**< for axis */
     ml->layer->posNext = newPos;
   } /**< for ml */
 }
-
 
 u_int bgColor = COLOR_BLACK;     /**< The background color */
 int redrawScreen = 1;           /**< Boolean for whether screen needs to be redrawn */
@@ -157,7 +169,6 @@ Region fieldFence;		/**< fence around playing field  */
 /** Initializes everything, enables interrupts and green LED, 
  *  and handles the rendering for the screen
  */
-char *xxx = "og1";
 void main()
 {
   P1DIR |= GREEN_LED;		/**< Green led on when CPU on */		
@@ -205,22 +216,20 @@ void wdt_c_handler()
     ml0.velocity.axes[0] = 1;
   }
   unsigned int temp = p2sw_read();
-  if(temp == 6){
-    xxx="fff";
-  }if(temp == 7){
-    xxx="hhh";
-  }if(temp == 11){
-    xxx="kkk";
-  }else{
-    xxx="off";
-    ml1.velocity.axes[0] = 0;
-  }
-  if(temp == 13){
+  ml1.velocity.axes[0] = 0;
+  
+  if(temp == 6){//sw1 and 4
+    //xxx="fff";
+  }if(temp == 7){//sw4
     ml1.velocity.axes[0] = 2;
-    xxx="mmm";
-  }if(temp == 14){
+    // xxx="hhh";
+  }if(temp == 11){//sw3
+    // xxx="iii";
+  }if(temp == 13){//2
+    //xxx="mmm";
+  }if(temp == 14){//sw1
     ml1.velocity.axes[0] = -2;
-    xxx="nnn";
+    //    xxx="nnn";
   }
   
   static short count = 0;
