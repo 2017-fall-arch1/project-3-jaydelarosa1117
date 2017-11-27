@@ -29,7 +29,7 @@ Layer layer4 = {
   (AbShape *)&rightArrow,
   {(screenWidth/2)+10, (screenHeight/2)+5}, /**< bit below & right of center */
   {0,0}, {0,0},				    /* last & next pos */
-  COLOR_BLACK,
+  COLOR_WHITE,
   0
 };
   
@@ -38,7 +38,7 @@ Layer layer3 = {		/**< Layer with an orange circle */
   (AbShape *)&circle8,
   {(screenWidth/2)+10, (screenHeight/2)+5}, /**< bit below & right of center */
   {0,0}, {0,0},				    /* last & next pos */
-  COLOR_VIOLET,
+  COLOR_WHITE,
   &layer4,
 };
 
@@ -55,7 +55,7 @@ Layer p1 = {		/**< Layer with a red square */
   (AbShape *)&paddle,
   {screenWidth/2, screenHeight-10}, /**< center */
   {0,0}, {0,0},				    /* last & next pos */
-  COLOR_RED,
+  COLOR_VIOLET,
   &fieldLayer,
 };
 
@@ -78,9 +78,9 @@ typedef struct MovLayer_s {
 } MovLayer;
 
 /* initial value of {0,0} will be overwritten */
-MovLayer ml4 = { &layer4, {1,1}, 0};
-MovLayer ml3 = { &layer3, {1,2}, &ml4 }; /**< not all layers move */
-MovLayer ml1 = { &p1, {-1,0}, &ml3 }; 
+MovLayer ml4 = { &layer4, {1,0}, 0};
+MovLayer ml3 = { &layer3, {2,1}, &ml4 }; /**< not all layers move */
+MovLayer ml1 = { &p1, {0,0}, &ml3 }; 
 MovLayer ml0 = { &p0, {1,0}, &ml1 }; 
 
 void movLayerDraw(MovLayer *movLayers, Layer *layers)
@@ -148,7 +148,7 @@ void mlAdvance(MovLayer *ml, Region *fence)
 }
 
 
-u_int bgColor = COLOR_YELLOW;     /**< The background color */
+u_int bgColor = COLOR_BLACK;     /**< The background color */
 int redrawScreen = 1;           /**< Boolean for whether screen needs to be redrawn */
 
 Region fieldFence;		/**< fence around playing field  */
@@ -182,7 +182,7 @@ void main()
   
    
   for(;;) { 
-    drawString5x7(20,20, xxx, COLOR_BLACK, COLOR_YELLOW);
+    drawString5x7(0,0, xxx, COLOR_WHITE, COLOR_BLACK);
     while (!redrawScreen) { /**< Pause CPU if screen doesn't need updating */
       P1OUT &= ~GREEN_LED;    /**< Green led off witHo CPU */
       or_sr(0x10);	      /**< CPU OFF */
@@ -196,6 +196,14 @@ void main()
 /** Watchdog timer interrupt handler. 15 interrupts/sec */
 void wdt_c_handler()
 {
+  int yBall = ml3.layer->pos.axes[0];
+  int yPaddle = ml0.layer->pos.axes[0]; 
+  if(yBall < yPaddle){
+    ml0.velocity.axes[0] = -1;
+  }
+  else{
+    ml0.velocity.axes[0] = 1;
+  }
   unsigned int temp = p2sw_read();
   if(temp == 6){
     xxx="fff";
@@ -203,9 +211,15 @@ void wdt_c_handler()
     xxx="hhh";
   }if(temp == 11){
     xxx="kkk";
-  }if(temp == 13){
+  }else{
+    xxx="off";
+    ml1.velocity.axes[0] = 0;
+  }
+  if(temp == 13){
+    ml1.velocity.axes[0] = 2;
     xxx="mmm";
   }if(temp == 14){
+    ml1.velocity.axes[0] = -2;
     xxx="nnn";
   }
   
