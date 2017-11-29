@@ -15,6 +15,7 @@
 #include <p2switches.h>
 #include <shape.h>
 #include <abCircle.h>
+#include "buzzer.h"
 
 #define GREEN_LED BIT6
 
@@ -145,6 +146,7 @@ void mlAdvance(MovLayer *ml, Region *fence)
 	int velocity = ml->velocity.axes[axis] = -ml->velocity.axes[axis];
 	newPos.axes[axis] += (2*velocity);
 	if(axis == 1){
+	  buzzer_set_period(3000);
 	  xxx[1] = (char)((int)xxx[1]+1);
 	}
       }
@@ -152,9 +154,11 @@ void mlAdvance(MovLayer *ml, Region *fence)
 	int velocity = ml->velocity.axes[axis] = -ml->velocity.axes[axis];
 	newPos.axes[axis] += (2*velocity);
 	if(axis == 1){
+	  buzzer_set_period(3000);
 	  xxx[0] = (char)((int)xxx[0]+1);
 	}
-      }	/**< if outside of fence */
+      }
+      /**< if outside of fence */
     } /**< for axis */
     ml->layer->posNext = newPos;
   } /**< for ml */
@@ -178,7 +182,7 @@ void main()
   lcd_init();
   shapeInit();
   p2sw_init(15);
-
+  buzzer_init();
   shapeInit();
 
   layerInit(&p0);
@@ -219,6 +223,7 @@ void wdt_c_handler()
   ml1.velocity.axes[0] = 0;
   
   if(temp == 6){//sw1 and 4
+    buzzer_set_period(0);
     //xxx="fff";
   }if(temp == 7){//sw4
     ml1.velocity.axes[0] = 2;
@@ -242,4 +247,5 @@ void wdt_c_handler()
     count = 0;
   } 
   P1OUT &= ~GREEN_LED;		    /**< Green LED off when cpu off */
+  
 }
