@@ -43,7 +43,7 @@ Layer layer3 = {		/**< Layer with an orange circle */
   {(screenWidth/2)+10, (screenHeight/2)+5}, /**< bit below & right of center */
   {0,0}, {0,0},				    /* last & next pos */
   COLOR_WHITE,
-  &layer4,
+  0,
 };
 
 
@@ -83,7 +83,7 @@ typedef struct MovLayer_s {
 
 /* initial value of {0,0} will be overwritten */
 MovLayer ml4 = { &layer4, {1,0}, 0}; //arrow
-MovLayer ml3 = { &layer3, {4,2}, &ml4 };//ball is life
+MovLayer ml3 = { &layer3, {3,10}, 0 };//ball is life
 MovLayer ml1 = { &p1, {0,0}, &ml3 }; //player paddle
 MovLayer ml0 = { &p0, {2,0}, &ml1 };//cpu paddle 
 
@@ -132,21 +132,50 @@ void movLayerDraw(MovLayer *movLayers, Layer *layers)
  *  \param ml The moving shape to be advanced
  *  \param fence The region which will serve as a boundary for ml
  */
+
+
+
+
+
+unsigned char noise = 0, sDir = 0;
 char xxx[3] = {'0','0',0};
-void mlAdvance(MovLayer *ml, Region *fence)
+void mlAdvance(MovLayer *real, Region *fence)
 {
   Vec2 newPos;
+
+  Vec2 newPadPos;
+  Vec2 newPad2Pos;
+  Vec2 newBallPos;
+  Region shapePadBoundary;
+  Region shapePad2Boundary;
+  Region shapeBallBoundary;
+  
   u_char axis;
   Region shapeBoundary;
-  for (; ml; ml = ml->next) {
+  MovLayer *ml;
+  MovLayer *ball = real->next->next;
+
+  int obj = 1;
+  Region ballBoundary;
+  //Vec2 newBallPos;
+    
+  for (ml = real; ml; ml = ml->next) {
     vec2Add(&newPos, &ml->layer->posNext, &ml->velocity);
     abShapeGetBounds(ml->layer->abShape, &newPos, &shapeBoundary);
+
+  
+    vec2Add(&newPadPos, &ml1.layer->posNext, &ml1.velocity);
+    vec2Add(&newPad2Pos, &ml0.layer->posNext, &ml0.velocity);
+    vec2Add(&newBallPos, &ml3.layer->posNext, &ml3.velocity);
+    abShapeGetBounds(ml1.layer->abShape, &newPadPos, &shapePadBoundary);
+    abShapeGetBounds(ml0.layer->abShape, &newPad2Pos, &shapePad2Boundary);
+    abShapeGetBounds(ml3.layer->abShape, &newBallPos, &shapeBallBoundary);
     for (axis = 0; axis < 2; axis ++) {
       if((shapeBoundary.topLeft.axes[axis] < fence->topLeft.axes[axis])){
 	int velocity = ml->velocity.axes[axis] = -ml->velocity.axes[axis];
 	newPos.axes[axis] += (2*velocity);
 	if(axis == 1){
-	  buzzer_set_period(3000);
+	  noise = 2;
 	  xxx[1] = (char)((int)xxx[1]+1);
 	}
       }
@@ -154,15 +183,37 @@ void mlAdvance(MovLayer *ml, Region *fence)
 	int velocity = ml->velocity.axes[axis] = -ml->velocity.axes[axis];
 	newPos.axes[axis] += (2*velocity);
 	if(axis == 1){
-	  buzzer_set_period(3000);
+	  noise = 2;
 	  xxx[0] = (char)((int)xxx[0]+1);
 	}
       }
+
+      if((shapeBallBoundary.topLeft.axes[0] > shapePadBoundary.topLeft.axes[0]) && (shapeBallBoundary.botRight.axes[0] < shapePadBoundary.botRight.axes[0]) && (shapeBallBoundary.topLeft.axes[1] == shapePadBoundary.botRight.axes[1]) ){
+	int velocity = ml3.velocity.axes[1] = -10;
+	newBallPos.axes[1] += (2*velocity);
+	noise = 1;
+      }
+      if((shapeBallBoundary.topLeft.axes[0] > shapePad2Boundary.topLeft.axes[0]) && (shapeBallBoundary.botRight.axes[0] < shapePad2Boundary.botRight.axes[0]) && (shapeBallBoundary.botRight.axes[1] == shapePad2Boundary.topLeft.axes[1]) ){
+	int velocity = ml3.velocity.axes[1] = 10;
+	newBallPos.axes[1] += (2*velocity);
+	noise = 1;
+      }
+      
       /**< if outside of fence */
     } /**< for axis */
     ml->layer->posNext = newPos;
   } /**< for ml */
 }
+
+
+
+
+
+
+
+
+
+
 
 u_int bgColor = COLOR_BLACK;     /**< The background color */
 int redrawScreen = 1;           /**< Boolean for whether screen needs to be redrawn */
@@ -207,7 +258,7 @@ void main()
     movLayerDraw(&ml0, &p0);
   }
 }
-
+unsigned char paused = 0;
 /** Watchdog timer interrupt handler. 15 interrupts/sec */
 void wdt_c_handler()
 {
@@ -222,30 +273,41 @@ void wdt_c_handler()
   unsigned int temp = p2sw_read();
   ml1.velocity.axes[0] = 0;
   
-  if(temp == 6){//sw1 and 4
-    buzzer_set_period(0);
-    //xxx="fff";
+  if(temp == 5){//sw2 and 4
+    xxx[0] = '0';
+    xxx[1] = '0';
+    ml3.layer->pos.axes[0] = 10;
+    ml3.layer->pos.axes[0] = 10;
+    ml3.velocity.axes[1] = -10;
   }if(temp == 7){//sw4
     ml1.velocity.axes[0] = 2;
-    // xxx="hhh";
   }if(temp == 11){//sw3
-    // xxx="iii";
-  }if(temp == 13){//2
-    //xxx="mmm";
+    paused = 1;
+  }if(temp == 13){//sw2
+    paused = 0;
   }if(temp == 14){//sw1
     ml1.velocity.axes[0] = -2;
-    //    xxx="nnn";
   }
   
   static short count = 0;
   P1OUT |= GREEN_LED;		      /**< Green LED on when cpu on */
-  count ++;
-  if (count == 15) {
-    mlAdvance(&ml0, &fieldFence);
-    if (p2sw_read())
+  if(!paused){
+    count++;
+    if ((count == 15)) {
+      mlAdvance(&ml0, &fieldFence);
+      if(noise == 1){
+	buzzer_set_period(4000);
+	noise = 0;
+      }else if(noise == 2){
+	buzzer_set_period(10000);
+	noise = 0;
+      }else{
+	buzzer_set_period(0);
+      }
       redrawScreen = 1;
-    count = 0;
-  } 
+      count = 0;
+    }
+  }
   P1OUT &= ~GREEN_LED;		    /**< Green LED off when cpu off */
   
 }
