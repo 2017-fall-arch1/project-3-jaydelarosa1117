@@ -26,7 +26,7 @@ AbRArrow rightArrow = {abRArrowGetBounds, abRArrowCheck, 30};
 
 AbRectOutline fieldOutline = {	/* playing field */
   abRectOutlineGetBounds, abRectOutlineCheck,   
-  {screenWidth/2 - 1, screenHeight/2 - 1}
+  {screenWidth/2 - 1, screenHeight/2 - 5}
 };
 
 Layer layer4 = {
@@ -49,7 +49,7 @@ Layer layer3 = {		/**< Layer with an orange circle */
 
 Layer fieldLayer = {		/* playing field as a layer */
   (AbShape *) &fieldOutline,
-  {screenWidth/2, screenHeight/2},/**< center */
+  {screenWidth/2, (screenHeight/2)+4},/**< center */
   {0,0}, {0,0},				    /* last & next pos */
   COLOR_GREEN,
   &layer3
@@ -65,7 +65,7 @@ Layer p1 = {		/**< Layer with a red square */
 
 Layer p0 = {		/**< Layer with an orange circle */
   (AbShape *)&paddle,
-  {(screenWidth/2), 10}, /**< bit below & right of center */
+  {(screenWidth/2), 20}, /**< bit below & right of center */
   {0,0}, {0,0},				    /* last & next pos */
   COLOR_ORANGE,
   &p1,
@@ -138,7 +138,8 @@ void movLayerDraw(MovLayer *movLayers, Layer *layers)
 
 
 unsigned char noise = 0, sDir = 0;
-char xxx[3] = {'0','0',0};
+char P1S[6] = {'P','1',':','0','0','\0'};
+char CPU[7] = {'C','P','U',':','0','0','\0'};
 void mlAdvance(MovLayer *real, Region *fence)
 {
   Vec2 newPos;
@@ -176,7 +177,13 @@ void mlAdvance(MovLayer *real, Region *fence)
 	newPos.axes[axis] += (2*velocity);
 	if(axis == 1){
 	  noise = 2;
-	  xxx[1] = (char)((int)xxx[1]+1);
+	  
+	  if((P1S[4]) == '9'){
+	    P1S[3] = (char)((int)P1S[3]+1);
+	    P1S[4] = '0';
+	  }else{
+	    P1S[4] = (char)((int)P1S[4]+1);
+	  }
 	}
       }
       else if ((shapeBoundary.botRight.axes[axis] > fence->botRight.axes[axis])) {
@@ -184,7 +191,13 @@ void mlAdvance(MovLayer *real, Region *fence)
 	newPos.axes[axis] += (2*velocity);
 	if(axis == 1){
 	  noise = 2;
-	  xxx[0] = (char)((int)xxx[0]+1);
+
+	  if((CPU[5]) == '9'){
+	    CPU[4] = (char)((int)CPU[4]+1);
+	   CPU[5] = '0';
+	  }else{
+	    CPU[5] = (char)((int)CPU[5]+1);
+	  }
 	}
       }
 
@@ -248,7 +261,8 @@ void main()
   
    
   for(;;) { 
-    drawString5x7(0,0, xxx, COLOR_WHITE, COLOR_BLACK);
+    drawString5x7(0,0, P1S, COLOR_PURPLE, COLOR_BLACK);
+    drawString5x7(85,0, CPU, COLOR_ORANGE, COLOR_BLACK);
     while (!redrawScreen) { /**< Pause CPU if screen doesn't need updating */
       P1OUT &= ~GREEN_LED;    /**< Green led off witHo CPU */
       or_sr(0x10);	      /**< CPU OFF */
@@ -274,11 +288,10 @@ void wdt_c_handler()
   ml1.velocity.axes[0] = 0;
   
   if(temp == 5){//sw2 and 4
-    xxx[0] = '0';
-    xxx[1] = '0';
-    ml3.layer->pos.axes[0] = 10;
-    ml3.layer->pos.axes[0] = 10;
-    ml3.velocity.axes[1] = -10;
+    P1S[4] = '0';
+    P1S[3] = '0';
+    CPU[4] = '0';
+    CPU[5] = '0';
   }if(temp == 7){//sw4
     ml1.velocity.axes[0] = 2;
   }if(temp == 11){//sw3
