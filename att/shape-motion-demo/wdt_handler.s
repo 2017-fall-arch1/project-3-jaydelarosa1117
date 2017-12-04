@@ -1,3 +1,10 @@
+	.extern pl1
+	.extern pl10
+	.extern c1
+	.extern c10
+	.global upCScore
+	.global upPScore
+	.global resetScores
 	.file	"_wdt_handler.c"
 .text
 	.balign 2
@@ -56,3 +63,30 @@ ball_no_move:
 	.local	count
 	.comm	count,1,1
 	.ident	"GCC: (GNU) 4.9.1 20140707 (prerelease (msp430-14r1-364)) (GNUPro 14r1) (Based on: GCC 4.8 GDB 7.7 Binutils 2.24 Newlib 2.1)"
+
+upPScore:
+	cmp.b	#57, &pl1
+	jnz	Plse
+	add.b	#1, &pl10
+	mov.b	#48, &pl1
+	jmp	Pend
+Plse:
+	add.b 	#1, &pl1
+Pend:	ret
+	
+upCScore:
+	cmp.b	#57, &c1
+	jnz	Clse
+	add.b	#1, &c10
+	mov.b	#48, &c1
+	jmp 	Cend
+Clse:
+	add.b 	#1, &c1
+Cend:	ret	 
+
+resetScores:
+	mov.b 	#48, &c1
+	mov.b 	#48, &c10
+	mov.b 	#48, &pl1
+	mov.b 	#48, &pl10
+	ret

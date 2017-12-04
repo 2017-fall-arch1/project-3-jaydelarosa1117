@@ -16,9 +16,11 @@
 #include <shape.h>
 #include <abCircle.h>
 #include "buzzer.h"
+#include "scoreA.h"
 
 #define GREEN_LED BIT6
 
+char pl1 = '0', pl10 = '0', c1 = '0', c10 = '0';
 
 AbRect paddle = {abRectGetBounds, abRectCheck, {20,3}};
 AbRect ball = {abRectGetBounds, abRectCheck, {2,2}};
@@ -40,7 +42,7 @@ Layer layer4 = {
 
 Layer layer3 = {		/**< Layer with an orange circle */
   (AbShape *)&ball,
-  {(screenWidth/2)+10, (screenHeight/2)+5}, /**< bit below & right of center */
+  {screenWidth-20, (screenHeight/2)+50}, /**< bit below & right of center */
   {0,0}, {0,0},				    /* last & next pos */
   COLOR_WHITE,
   0,
@@ -83,7 +85,7 @@ typedef struct MovLayer_s {
 
 /* initial value of {0,0} will be overwritten */
 MovLayer ml4 = { &layer4, {1,0}, 0}; //arrow
-MovLayer ml3 = { &layer3, {3,10}, 0 };//ball is life
+MovLayer ml3 = { &layer3, {3,-5}, 0 };//ball is life
 MovLayer ml1 = { &p1, {0,0}, &ml3 }; //player paddle
 MovLayer ml0 = { &p0, {2,0}, &ml1 };//cpu paddle 
 
@@ -177,13 +179,9 @@ void mlAdvance(MovLayer *real, Region *fence)
 	newPos.axes[axis] += (2*velocity);
 	if(axis == 1){
 	  noise = 2;
-	  
-	  if((P1S[4]) == '9'){
-	    P1S[3] = (char)((int)P1S[3]+1);
-	    P1S[4] = '0';
-	  }else{
-	    P1S[4] = (char)((int)P1S[4]+1);
-	  }
+	  upPScore();
+	  P1S[4] = (char)pl1;
+	  P1S[3] = (char)pl10;
 	}
       }
       else if ((shapeBoundary.botRight.axes[axis] > fence->botRight.axes[axis])) {
@@ -191,23 +189,19 @@ void mlAdvance(MovLayer *real, Region *fence)
 	newPos.axes[axis] += (2*velocity);
 	if(axis == 1){
 	  noise = 2;
-
-	  if((CPU[5]) == '9'){
-	    CPU[4] = (char)((int)CPU[4]+1);
-	   CPU[5] = '0';
-	  }else{
-	    CPU[5] = (char)((int)CPU[5]+1);
-	  }
+	  
+	  upCScore();
+	  CPU[5] = (char)c1;
+	  CPU[4] = (char)c10;
 	}
       }
-
       if((shapeBallBoundary.topLeft.axes[0] > shapePadBoundary.topLeft.axes[0]) && (shapeBallBoundary.botRight.axes[0] < shapePadBoundary.botRight.axes[0]) && (shapeBallBoundary.topLeft.axes[1] == shapePadBoundary.botRight.axes[1]) ){
-	int velocity = ml3.velocity.axes[1] = -10;
+	int velocity = ml3.velocity.axes[1] = -5;
 	newBallPos.axes[1] += (2*velocity);
 	noise = 1;
       }
       if((shapeBallBoundary.topLeft.axes[0] > shapePad2Boundary.topLeft.axes[0]) && (shapeBallBoundary.botRight.axes[0] < shapePad2Boundary.botRight.axes[0]) && (shapeBallBoundary.botRight.axes[1] == shapePad2Boundary.topLeft.axes[1]) ){
-	int velocity = ml3.velocity.axes[1] = 10;
+	int velocity = ml3.velocity.axes[1] = 5;
 	newBallPos.axes[1] += (2*velocity);
 	noise = 1;
       }
@@ -278,20 +272,23 @@ void wdt_c_handler()
 {
   int yBall = ml3.layer->pos.axes[0];
   int yPaddle = ml0.layer->pos.axes[0]; 
+
   if(yBall < yPaddle){
     ml0.velocity.axes[0] = -1;
   }
   else{
     ml0.velocity.axes[0] = 1;
   }
+  
   unsigned int temp = p2sw_read();
   ml1.velocity.axes[0] = 0;
   
   if(temp == 5){//sw2 and 4
-    P1S[4] = '0';
-    P1S[3] = '0';
-    CPU[4] = '0';
-    CPU[5] = '0';
+    resetScores();
+    CPU[5] = c1;
+    CPU[4] = c10;
+    P1S[4] = pl1;
+    P1S[3] = pl10;
   }if(temp == 7){//sw4
     ml1.velocity.axes[0] = 2;
   }if(temp == 11){//sw3
