@@ -19,11 +19,12 @@
 
 #define GREEN_LED BIT6
 
+//initial score for the paddles
 char cScore[7]="CPU:00\0",pScore[6]="P1:00\0";
 
+//paddle and ball "objects"
 AbRect paddle = {abRectGetBounds, abRectCheck, {20,3}};
 AbRect ball = {abRectGetBounds, abRectCheck, {2,2}};
-AbRArrow rightArrow = {abRArrowGetBounds, abRArrowCheck, 30};
 
 AbRectOutline fieldOutline = {	/* playing field */
   abRectOutlineGetBounds, abRectOutlineCheck,   
@@ -31,7 +32,7 @@ AbRectOutline fieldOutline = {	/* playing field */
 };
   
 
-Layer layer3 = {		/**< Layer with an orange circle */
+Layer layer3 = {	//ball is life
   (AbShape *)&ball,
   {screenWidth-20, (screenHeight/2)+50}, /**< bit below & right of center */
   {0,0}, {0,0},				    /* last & next pos */
@@ -48,17 +49,17 @@ Layer fieldLayer = {		/* playing field as a layer */
   &layer3
 };
 
-Layer p1 = {		/**< Layer with a red square */
+Layer p1 = {		//player paddle
   (AbShape *)&paddle,
-  {screenWidth/2, screenHeight-10}, /**< center */
+  {screenWidth/2, screenHeight-10}, 
   {0,0}, {0,0},				    /* last & next pos */
   COLOR_VIOLET,
   &fieldLayer,
 };
 
-Layer p0 = {		/**< Layer with an orange circle */
+Layer p0 = {		//cpu paddle
   (AbShape *)&paddle,
-  {(screenWidth/2), 20}, /**< bit below & right of center */
+  {(screenWidth/2), 20},
   {0,0}, {0,0},				    /* last & next pos */
   COLOR_ORANGE,
   &p1,
@@ -128,8 +129,9 @@ void movLayerDraw(MovLayer *movLayers, Layer *layers)
 
 
 
-
+//flag for beep noise
 unsigned char noise = 0;
+
 void mlAdvance(MovLayer *real, Region *fence)
 {
   Vec2 newPos;
@@ -254,10 +256,9 @@ unsigned char paused = 0;
 /** Watchdog timer interrupt handler. 15 interrupts/sec */
 void wdt_c_handler()
 {
-  int yBall = ml3.layer->pos.axes[0];
-  int yPaddle = ml0.layer->pos.axes[0]; 
-
-  if(yBall < yPaddle){
+  int yBall = ml3.layer->pos.axes[0];// gets y location of ball
+  int yPaddle = ml0.layer->pos.axes[0];// gets y location of cpu paddle 
+  if(yBall < yPaddle){//cpu paddle follows ball
     ml0.velocity.axes[0] = -1;
   }
   else{
@@ -265,22 +266,23 @@ void wdt_c_handler()
   }
   
   unsigned int temp = p2sw_read();
-  ml1.velocity.axes[0] = 0;
+  ml1.velocity.axes[0] = 0;//stops player paddle
   
   if(temp == 5){//sw2 and 4
-    resetScores(pScore,cScore);
+    resetScores(pScore,cScore);//calls function in the assembly file
   }if(temp == 7){//sw4
-    ml1.velocity.axes[0] = 2;
+    ml1.velocity.axes[0] = 2; //moves paddle right
   }if(temp == 11){//sw3
-    paused = 1;
+    paused = 1;//pauses game
   }if(temp == 13){//sw2
-    paused = 0;
+    paused = 0;//unpauses game
   }if(temp == 14){//sw1
-    ml1.velocity.axes[0] = -2;
+    ml1.velocity.axes[0] = -2;//moves paddle left
   }
   
   static short count = 0;
   P1OUT |= GREEN_LED;		      /**< Green LED on when cpu on */
+  //wont update anyuthing if paused
   if(!paused){
     count++;
     if ((count == 15)) {
